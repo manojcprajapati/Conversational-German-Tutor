@@ -1,0 +1,7 @@
+{
+  "name": "Conversational German Tutor",
+  "description": "An AI-powered conversational German language tutor designed for native Hindi speakers. Practice speaking and learn new vocabulary in a friendly chat environment.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
