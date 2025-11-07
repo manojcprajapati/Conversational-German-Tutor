@@ -96,18 +96,30 @@ function App() {
       
       setMessages(prev => [...prev, { role: Role.MODEL, text: '' }]);
       
+      let sentenceBuffer = '';
+
       for await (const chunk of stream) {
         fullResponse += chunk.text;
+        sentenceBuffer += chunk.text;
+
         setMessages(prev => {
           const updatedMessages = [...prev];
           updatedMessages[updatedMessages.length - 1].text = fullResponse;
           return updatedMessages;
         });
+        
+        const sentenceEndIndex = sentenceBuffer.search(/[.!?]/);
+        if (sentenceEndIndex !== -1) {
+            const sentence = sentenceBuffer.substring(0, sentenceEndIndex + 1);
+            sentenceBuffer = sentenceBuffer.substring(sentenceEndIndex + 1);
+            geminiTtsService.speak(sentence, currentGenerationId.current, (error) => {
+              setMessages(prev => [...prev, { role: Role.ERROR, text: `Audio Error: ${error}` }]);
+            });
+        }
       }
       
-      // Fix: Make a single TTS call after the full response is received.
-      if (fullResponse.trim()) {
-        geminiTtsService.speak(fullResponse, currentGenerationId.current, (error) => {
+      if (sentenceBuffer.trim()) {
+        geminiTtsService.speak(sentenceBuffer, currentGenerationId.current, (error) => {
           setMessages(prev => [...prev, { role: Role.ERROR, text: `Audio Error: ${error}` }]);
         });
       }
@@ -187,14 +199,14 @@ function App() {
             onclose: (e) => {
                 console.log('Live session closed');
             },
-        });
+        }, deepGrammar);
     } catch (error) {
         console.error("Failed to start recording:", error);
         setMessages(prev => [...prev, { role: Role.ERROR, text: 'Could not access microphone.' }]);
         setIsRecording(false);
         setLiveTranscription('');
     }
-  }, [handleLiveMessage, stopRecording]);
+  }, [handleLiveMessage, stopRecording, deepGrammar]);
 
 
   const toggleRecording = () => {

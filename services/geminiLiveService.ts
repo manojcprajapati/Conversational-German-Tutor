@@ -17,6 +17,13 @@ const BASE_LIVE_SYSTEM_INSTRUCTION = `You are a friendly German voice tutor for 
 - **Voice only:** This is a voice conversation. Do not use markdown or refer to text.
 `;
 
+const DEEP_GRAMMAR_LIVE_SYSTEM_INSTRUCTION = `You are an expert German language voice tutor. Your goal is to provide detailed explanations while maintaining a natural conversation.
+- **Analyze and Explain:** Listen carefully to the user's response. If they make a grammatical mistake, gently correct it and briefly explain the rule in a simple, conversational way.
+- **Detailed but Conversational:** Provide explanations similar to a text-based tutor, but keep your sentences flowing and natural for a voice conversation.
+- **Always ask a question:** Your response MUST end with a follow-up question to keep the lesson moving.
+- **Voice only:** This is a voice conversation. Do not use markdown or refer to text.
+`;
+
 class GeminiLiveService {
   private ai: GoogleGenAI;
   private sessionPromise: Promise<any> | null = null;
@@ -35,13 +42,16 @@ class GeminiLiveService {
     this.ai = new GoogleGenAI({ apiKey });
   }
 
-  public async connect(callbacks: LiveCallbacks): Promise<void> {
+  public async connect(callbacks: LiveCallbacks, deepGrammar: boolean): Promise<void> {
     if (this.sessionPromise) {
         console.log("A session is already connecting or active.");
         return;
     }
     
     this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    const systemInstruction = deepGrammar ? DEEP_GRAMMAR_LIVE_SYSTEM_INSTRUCTION : BASE_LIVE_SYSTEM_INSTRUCTION;
+    const thinkingConfig = deepGrammar ? {} : { thinkingBudget: 0 };
 
     this.sessionPromise = this.ai.live.connect({
       model: 'gemini-2.5-flash-native-audio-preview-09-2025',
@@ -65,8 +75,8 @@ class GeminiLiveService {
         speechConfig: {
           voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } },
         },
-        systemInstruction: BASE_LIVE_SYSTEM_INSTRUCTION,
-        thinkingConfig: { thinkingBudget: 0 }, 
+        systemInstruction,
+        thinkingConfig, 
         inputAudioTranscription: {},
         outputAudioTranscription: {},
       },
